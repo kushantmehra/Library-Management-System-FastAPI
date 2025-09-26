@@ -1,4 +1,5 @@
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 import model, schemas, auth
 from fastapi import HTTPException, status
@@ -8,9 +9,13 @@ async def create_user(db:AsyncSession, user: schemas.UserCreate):
     hashed_pw = auth.hash_password(user.password)
     db_user= model.User(username = user.username, email = user.email, hashed_password = hashed_pw)
     db.add(db_user)
-    await db.commit()
-    await db.refresh(db_user)
-    return db_user
+    try:
+        await db.commit()
+        await db.refresh(db_user)
+        return db_user
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail= "Username or Email already Exists.")
 
 async def get_user_by_username(db:AsyncSession, username:str):
     result = await db.execute(select(model.User).where(model.User.username == username))
