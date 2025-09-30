@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import model, schemas, auth
 from fastapi import HTTPException, status
 from datetime import datetime
+import pytz
 
 #USERS
 async def create_user(db:AsyncSession, user: schemas.UserCreate):
@@ -91,7 +92,7 @@ async def delete_book(db: AsyncSession, book_id : int):
 async def borrow_book(db: AsyncSession,user_id: int, loan_in: schemas.LoanBase):
     book = await db.get(model.books, loan_in.book_id)
     if not book or not book.available:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detial = "BOOK NOT FOUND")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = "BOOK NOT FOUND")
     
     loan = model.loan(
         user_id = user_id,
@@ -105,17 +106,26 @@ async def borrow_book(db: AsyncSession,user_id: int, loan_in: schemas.LoanBase):
     await db.refresh(loan)
     return loan
 
-async def return_book(db : AsyncSession, user_id : int, loan_id: int):
+async def return_book(db: AsyncSession, user_id: int, loan_id: int):
+
+    IST = pytz.timezone("Asia/Kolkata")
+    now_ist = datetime.now(IST)
+
     loan = await db.get(model.loan, loan_id)
     if not loan or loan.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Loan Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Loan Not Found")
     
     if loan.returned_at:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Book Already Returned")
     
-    if loan.returned_at> loan.due_date:
+    loan.returned_at = datetime.now(IST).replace(tzinfo=None)
+
+    fine = 0
+    
+    if loan.returned_at > loan.due_date:
         days_late = (loan.returned_at - loan.due_date).days
-        loan.fine = days_late * 10 # Late Fine of 10rs / day.
+        fine = days_late * 10
+    loan.fine = fine
 
     book = await db.get(model.books, loan.book_id)
     book.available = True

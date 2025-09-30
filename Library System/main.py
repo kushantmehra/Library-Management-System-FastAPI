@@ -86,8 +86,9 @@ async def return_book( loan_id: int = Path(...,ge =1),
                       current_user: model.User = Depends(dependencies.get_current_user)):
     return await crud.return_book(db,current_user.id, loan_id)
 
-@app.get("/my-loans/",response_model=list[schemas.LoanOut])
+@app.get("/my-loans/",response_model=list[schemas.LoanOut], tags=["User"])
 async def my_loans(
     db:AsyncSession= Depends(dependencies.get_db),
     current_user: model.User = Depends(dependencies.get_current_user)):
+    
     return await crud.get_user_loans(db, current_user.id)

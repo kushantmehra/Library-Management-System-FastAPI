@@ -1,7 +1,13 @@
 from database import Base
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float
 from sqlalchemy.orm import relationship
-from datetime import datetime 
+from datetime import datetime
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
+def ist_now():
+    return datetime.now(IST)
+
 class User(Base):
     __tablename__ = "users"
 
@@ -28,10 +34,10 @@ class loan(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id= Column(Integer, ForeignKey("users.id"))
     book_id= Column(Integer,ForeignKey("books.id"))
-    borrowed_at = Column(DateTime, default=datetime.utcnow)
-    due_date = Column(DateTime)
+    borrowed_at = Column(DateTime, default=ist_now)
+    due_date = Column(DateTime, default=lambda: datetime.now(IST))
     returned_at= Column(DateTime, nullable=True)
     fine = Column(Float, default=0.0)
 
-    user = relationship("User", back_populates="loan")
-    book= relationship("books",back_populates="loan")
+    user = relationship("User", back_populates="loans")
+    book = relationship("books",back_populates="loans")
