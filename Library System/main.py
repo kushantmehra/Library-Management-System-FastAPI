@@ -41,7 +41,7 @@ async def update_user(user_in : schemas.UserUpdate,
     return updated
 
 @app.delete("/user/{user_id}", tags= ["User"])
-async def delete_book(db: AsyncSession = Depends(dependencies.get_db),
+async def delete_user(db: AsyncSession = Depends(dependencies.get_db),
                       current_user: model.User = Depends(dependencies.get_current_user)):
     return await crud.delete_user(db, current_user.id)
 

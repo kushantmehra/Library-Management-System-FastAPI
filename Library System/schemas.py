@@ -1,6 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from typing import Optional
 from datetime import datetime
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
 
 class UserCreate(BaseModel):
     username: str
@@ -38,7 +41,7 @@ class BookUpdate(BaseModel):
 
 class LoanBase(BaseModel):
     book_id:int
-    due_date: datetime
+    due_date: datetime = Field(default_factory=lambda: datetime.now(IST))
 
 class LoanOut(BaseModel):
     id : int
