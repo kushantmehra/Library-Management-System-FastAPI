@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class UserCreate(BaseModel):
     username: str
@@ -11,7 +12,7 @@ class UserOut(BaseModel):
     username: str
     email: str
     class Config :
-        orm_mode = True
+        from_attributes = True
 
 class BooksCreate(BaseModel):
     author: str
@@ -23,7 +24,7 @@ class BooksOut(BaseModel):
     title : str
     available : bool
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserUpdate(BaseModel):
     username: Optional[str]= None
@@ -35,4 +36,18 @@ class BookUpdate(BaseModel):
     title: Optional[str]= None
     available : Optional[bool]= None
 
+class LoanBase(BaseModel):
+    book_id:int
+    due_date: datetime
 
+class LoanOut(BaseModel):
+    id : int
+    user_id:int
+    book_id: int
+    borrowed_at : datetime
+    due_date : datetime
+    returned_at: datetime| None
+    fine: float
+
+    class Config:
+        from_attributes = True

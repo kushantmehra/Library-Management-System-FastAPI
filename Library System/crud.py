@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 import model, schemas, auth
 from fastapi import HTTPException, status
+from datetime import datetime
 
 #USERS
 async def create_user(db:AsyncSession, user: schemas.UserCreate):
@@ -47,6 +48,10 @@ async def delete_user(db: AsyncSession, user_id :int):
     await db.commit()
     return{"OK":True}
 
+async def get_user_loans(db:AsyncSession, user_id: int):
+    result = await db.execute(select(model.loan).where(model.loan.user_id == user_id))
+    return result.scalars().all()
+
 #BOOKS
 async def create_book(db:AsyncSession, book: schemas.BooksCreate):
     db_book = model.books(**book.dict())
@@ -83,3 +88,40 @@ async def delete_book(db: AsyncSession, book_id : int):
     await db.commit()
     return{"OK",True}
 
+async def borrow_book(db: AsyncSession,user_id: int, loan_in: schemas.LoanBase):
+    book = await db.get(model.books, loan_in.book_id)
+    if not book or not book.available:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detial = "BOOK NOT FOUND")
+    
+    loan = model.loan(
+        user_id = user_id,
+        book_id = loan_in.book_id,
+        due_date=  loan_in.due_date
+    )
+    book.available = False
+    db.add(loan)
+    db.add(book)
+    await db.commit()
+    await db.refresh(loan)
+    return loan
+
+async def return_book(db : AsyncSession, user_id : int, loan_id: int):
+    loan = await db.get(model.loan, loan_id)
+    if not loan or loan.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Loan Not Found")
+    
+    if loan.returned_at:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Book Already Returned")
+    
+    if loan.returned_at> loan.due_date:
+        days_late = (loan.returned_at - loan.due_date).days
+        loan.fine = days_late * 10 # Late Fine of 10rs / day.
+
+    book = await db.get(model.books, loan.book_id)
+    book.available = True
+
+    db.add(loan)
+    db.add(book)
+    await db.commit()
+    await db.refresh(loan)
+    return loan
