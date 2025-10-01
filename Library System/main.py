@@ -15,7 +15,7 @@ async def startup():
 
 @app.get("/")
 async def home():
-    message = "Welcome to Library Management System"
+    message = "Welcome to Library Management System, Add /docs in the url to test the apis."
     return message
 
 # Auth token
@@ -28,6 +28,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     return {"access_token": access_token, "token_type": "Bearer"}
 
 # User
+
+@app.get("/my-loans/",response_model=list[schemas.LoanOut], tags=["User"])
+async def my_loans(
+    db:AsyncSession= Depends(dependencies.get_db),
+    current_user: model.User = Depends(dependencies.get_current_user)):
+    
+    return await crud.get_user_loans(db, current_user.id)
+
 @app.post("/users/", response_model=schemas.UserOut, tags= ["User"])
 async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(dependencies.get_db)):
     db_user = await crud.create_user(db, user)
@@ -46,13 +54,14 @@ async def delete_user(db: AsyncSession = Depends(dependencies.get_db),
     return await crud.delete_user(db, current_user.id)
 
 # Books
-@app.post("/books/", response_model=schemas.BooksOut, tags= ["Book"])
-async def add_book(book: schemas.BooksCreate, db: AsyncSession = Depends(dependencies.get_db), current_user: model.User = Depends(dependencies.get_current_user)):
-    return await crud.create_book(db, book)
 
 @app.get("/books/", response_model=list[schemas.BooksOut], tags= ["Book"])
 async def list_books(db: AsyncSession = Depends(dependencies.get_db)):
     return await crud.get_books(db)
+
+@app.post("/books/", response_model=schemas.BooksOut, tags= ["Book"])
+async def add_book(book: schemas.BooksCreate, db: AsyncSession = Depends(dependencies.get_db), current_user: model.User = Depends(dependencies.get_current_user)):
+    return await crud.create_book(db, book)
 
 @app.put("/books/{book_id}", response_model=schemas.BookUpdate, tags= ["Book"])
 async def update_book(
@@ -72,6 +81,10 @@ async def delete_book(book_id : int = Path(..., ge=1),
 
 # Borrow
 
+@app.get("/all-loans/",response_model=list[schemas.LoanOut], tags=["Borrow"])
+async def all_loans(db:AsyncSession = Depends(dependencies.get_db)):
+    return await crud.get_all_loans(db)
+
 @app.post("/borrow/", response_model=schemas.LoanOut, tags=["Borrow"])
 async def borrow_book(
     loan_in : schemas.LoanBase,
@@ -85,10 +98,3 @@ async def return_book( loan_id: int = Path(...,ge =1),
                       db:AsyncSession = Depends(dependencies.get_db),
                       current_user: model.User = Depends(dependencies.get_current_user)):
     return await crud.return_book(db,current_user.id, loan_id)
-
-@app.get("/my-loans/",response_model=list[schemas.LoanOut], tags=["User"])
-async def my_loans(
-    db:AsyncSession= Depends(dependencies.get_db),
-    current_user: model.User = Depends(dependencies.get_current_user)):
-    
-    return await crud.get_user_loans(db, current_user.id)

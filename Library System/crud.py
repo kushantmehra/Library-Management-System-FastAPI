@@ -135,3 +135,7 @@ async def return_book(db: AsyncSession, user_id: int, loan_id: int):
     await db.commit()
     await db.refresh(loan)
     return loan
+
+async def get_all_loans(db:AsyncSession):
+    result = await db.execute(select(model.loan))
+    return result.scalars().all()
